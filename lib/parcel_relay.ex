@@ -14,9 +14,16 @@ end
 
 defmodule ParcelRelay do
   @moduledoc "Two supervised couriers; short routes trade time for scheduled bridge outages."
+  @closure_ticks [4, 8]
   def start do
     children = for id <- 1..2, do: Supervisor.child_spec({ParcelRelay.Courier, []}, id: id)
-    {:ok, supervisor} = Supervisor.start_link(children, strategy: :one_for_one)
+
+    {:ok, supervisor} =
+      Supervisor.start_link(children,
+        strategy: :one_for_one,
+        max_restarts: length(children) * length(@closure_ticks)
+      )
+
     %{supervisor: supervisor, workers: [1, 2], ticks: 0, delivered: 0, lost: 0, notice: ""}
   end
 
@@ -71,7 +78,7 @@ defmodule ParcelRelay do
     pid = worker(game, id)
 
     case GenServer.call(pid, :position) do
-      {left, :short} when left > 0 and tick in [4, 8] ->
+      {left, :short} when left > 0 and tick in @closure_ticks ->
         ref = Process.monitor(pid)
         Process.exit(pid, :kill)
         receive do: ({:DOWN, ^ref, :process, ^pid, _} -> :ok)
@@ -109,7 +116,7 @@ defmodule ParcelRelay do
       [
         "PARCEL RELAY | #{String.upcase(to_string(status(game)))}",
         "Deliver 4 parcels by tick 10 | tick #{game.ticks}/10 | delivered #{game.delivered}/4 | lost #{game.lost}",
-        "Safe: 3 ticks | Short: 2 ticks, bridge CLOSED at ticks 4 and 8",
+        "Safe: 3 ticks | Short: 2 ticks, bridge CLOSED at ticks #{Enum.join(@closure_ticks, " and ")}",
         Enum.join(lanes, "\n"),
         game.notice,
         "1 / 2: SAFE dispatch | 1s / 2s: SHORT dispatch | t: advance BOTH | q: quit"

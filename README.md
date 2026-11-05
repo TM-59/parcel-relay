@@ -6,7 +6,7 @@ Dispatch parcels to two supervised courier processes. Deliver **four parcels by 
 - **1s / 2s** uses the shortcut (2 ticks). The bridge closes at ticks **4 and 8**: a shortcut parcel still in transit is lost and its courier process restarts READY.
 - **t** advances both couriers together. A busy courier keeps its parcel and route. Invalid commands cost no time. **q** or EOF exits.
 
-The screen shows closures before you choose. Avoid dispatching a shortcut across a closure; the safe route remains available. Each courier is a supervised GenServer. There is no background clock or network service.
+The screen shows closures before you choose. Avoid dispatching a shortcut across a closure; the safe route remains available. Each courier is a supervised GenServer. The restart budget covers both couriers at both scheduled closures. There is no background clock or network service.
 
 ![Actual CLI output](docs/images/play.png)
 
@@ -37,4 +37,4 @@ make check
 
 M2 is implemented; M3 remains a separate milestone. Terminal accessibility, Windows and macOS execution, long sessions and player enjoyment are unverified.
 
-Verified on Linux: 9 ExUnit cases + 1 CLI smoke, all passing. See [requirements](docs/requirements.md).
+Verified on Linux: 10 ExUnit cases + 1 CLI smoke, all passing. See [requirements](docs/requirements.md).

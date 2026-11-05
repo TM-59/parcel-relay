@@ -96,3 +96,23 @@ defmodule ParcelRelayRoutesTest do
     assert game.ticks == 5
   end
 end
+
+defmodule ParcelRelayClosureTest do
+  use ExUnit.Case
+
+  test "REQ-recovery both closures can replace both workers in one fast game" do
+    game = ParcelRelay.start()
+
+    try do
+      commands = ["t", "t", "1s", "2s", "t", "t", "t", "t", "1s", "2s", "t", "t"]
+      result = Enum.reduce(commands, game, &ParcelRelay.act(&2, &1))
+      assert result.ticks == 8
+      assert result.lost == 4
+      assert result.delivered == 0
+      assert Process.alive?(result.supervisor)
+      assert Enum.all?(1..2, &Process.alive?(ParcelRelay.worker(result, &1)))
+    after
+      if Process.alive?(game.supervisor), do: Supervisor.stop(game.supervisor)
+    end
+  end
+end
