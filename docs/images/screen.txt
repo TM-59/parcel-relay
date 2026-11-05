@@ -1,0 +1,7 @@
+PARCEL RELAY | WON
+Deliver 4 parcels before tick 10 | tick 6/10 | delivered 4/4
+
+  Courier 1: READY
+  Courier 2: READY
+
+1 / 2: dispatch to a READY courier | t: advance BOTH | q: quit

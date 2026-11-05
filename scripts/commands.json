@@ -1,0 +1,17 @@
+{
+  "repository": "TM-59/parcel-relay",
+  "language": "Elixir",
+  "unit": [
+    "mix",
+    "test",
+    "--seed",
+    "59"
+  ],
+  "play": [
+    "mix",
+    "run",
+    "-e",
+    "ParcelRelay.main()"
+  ],
+  "demo": "1\n2\nt\nt\nt\n1\n2\nt\nt\nt\n"
+}
