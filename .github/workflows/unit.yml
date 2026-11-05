@@ -1,0 +1,27 @@
+name: unit
+on:
+  pull_request:
+    paths: ['lib/**', 'src/**', 'test/**', 'config/**', 'mix.*', 'Project.toml', 'Manifest.toml', 'scripts/**', 'Makefile', '.formatter.exs', '.github/workflows/**']
+concurrency:
+  group: unit-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '29.1'
+          elixir-version: '1.20.5'
+      - run: mix deps.get
+        env:
+          MIX_ENV: test
+      - run: mix format --check-formatted
+      - run: make test
