@@ -1,8 +1,12 @@
 # Parcel Relay
 
-Dispatch parcels to two independent courier processes. Press **1** and **2** to load idle couriers, then **t** to advance both. Deliver four parcels by tick ten. A busy courier keeps its parcel; invalid commands cost no time. **q** or EOF exits.
+Dispatch parcels to two supervised courier processes. Deliver **four parcels by tick ten**.
 
-Each courier is a supervised GenServer. Concurrent requests advance both on each player-controlled tick; there is no timer race or network service.
+- **1 / 2** sends an idle courier by the safe route (3 ticks).
+- **1s / 2s** uses the shortcut (2 ticks). The bridge closes at ticks **4 and 8**: a shortcut parcel still in transit is lost and its courier process restarts READY.
+- **t** advances both couriers together. A busy courier keeps its parcel and route. Invalid commands cost no time. **q** or EOF exits.
+
+The screen shows closures before you choose. Avoid dispatching a shortcut across a closure; the safe route remains available. Each courier is a supervised GenServer. There is no background clock or network service.
 
 ![Actual CLI output](docs/images/play.png)
 
@@ -31,6 +35,6 @@ make check
 
 `test` runs native unit tests; `check` also drives a real CLI victory. JUnit XML and schema-versioned summary JSON go to ignored `test-results/`. No test contacts a live service. PR CI runs unit checks only.
 
-M2 and M3 are separate milestones. Terminal accessibility, Windows and macOS execution, long sessions and player enjoyment are unverified.
+M2 is implemented; M3 remains a separate milestone. Terminal accessibility, Windows and macOS execution, long sessions and player enjoyment are unverified.
 
-Verified on Linux: 5 ExUnit cases + 1 CLI smoke, all passing. See [requirements](docs/requirements.md).
+Verified on Linux: 9 ExUnit cases + 1 CLI smoke, all passing. See [requirements](docs/requirements.md).
