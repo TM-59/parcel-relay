@@ -1,0 +1,9 @@
+_build/
+deps/
+.venv/
+test-results/
+*.beam
+*.ji
+*.core
+.env*
+*.pem
