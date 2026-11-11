@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 200" width="680" height="200" font-family="sans-serif" font-size="12">
+<rect width="680" height="200" fill="#ffffff"/>
+<text x="16" y="26" font-size="16" font-weight="bold" fill="#222">Dispatch tick against route: delivered on tick n, lost to a closure, or too late</text>
+<text x="110" y="46" fill="#444">ticks already passed when the courier is dispatched →</text>
+<text x="137" y="62" text-anchor="middle" fill="#444">0</text>
+<text x="195" y="62" text-anchor="middle" fill="#444">1</text>
+<text x="253" y="62" text-anchor="middle" fill="#444">2</text>
+<text x="311" y="62" text-anchor="middle" fill="#444">3</text>
+<text x="369" y="62" text-anchor="middle" fill="#444">4</text>
+<text x="427" y="62" text-anchor="middle" fill="#444">5</text>
+<text x="485" y="62" text-anchor="middle" fill="#444">6</text>
+<text x="543" y="62" text-anchor="middle" fill="#444">7</text>
+<text x="601" y="62" text-anchor="middle" fill="#444">8</text>
+<text x="16" y="102" fill="#222">SAFE</text>
+<text x="16" y="160" fill="#222">SHORT</text>
+<rect x="110" y="70" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="137" y="94" text-anchor="middle" fill="#fff">tick</text>
+<text x="137" y="112" text-anchor="middle" fill="#fff">3</text>
+<rect x="168" y="70" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="195" y="94" text-anchor="middle" fill="#fff">tick</text>
+<text x="195" y="112" text-anchor="middle" fill="#fff">4</text>
+<rect x="226" y="70" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="253" y="94" text-anchor="middle" fill="#fff">tick</text>
+<text x="253" y="112" text-anchor="middle" fill="#fff">5</text>
+<rect x="284" y="70" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="311" y="94" text-anchor="middle" fill="#fff">tick</text>
+<text x="311" y="112" text-anchor="middle" fill="#fff">6</text>
+<rect x="342" y="70" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="369" y="94" text-anchor="middle" fill="#fff">tick</text>
+<text x="369" y="112" text-anchor="middle" fill="#fff">7</text>
+<rect x="400" y="70" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="427" y="94" text-anchor="middle" fill="#fff">tick</text>
+<text x="427" y="112" text-anchor="middle" fill="#fff">8</text>
+<rect x="458" y="70" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="485" y="94" text-anchor="middle" fill="#fff">tick</text>
+<text x="485" y="112" text-anchor="middle" fill="#fff">9</text>
+<rect x="516" y="70" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="543" y="94" text-anchor="middle" fill="#fff">tick</text>
+<text x="543" y="112" text-anchor="middle" fill="#fff">10</text>
+<rect x="574" y="70" width="54" height="54" fill="#999999" opacity="0.85"/>
+<text x="601" y="94" text-anchor="middle" fill="#fff">late</text>
+<text x="601" y="112" text-anchor="middle" fill="#fff">10</text>
+<rect x="110" y="128" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="137" y="152" text-anchor="middle" fill="#fff">tick</text>
+<text x="137" y="170" text-anchor="middle" fill="#fff">2</text>
+<rect x="168" y="128" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="195" y="152" text-anchor="middle" fill="#fff">tick</text>
+<text x="195" y="170" text-anchor="middle" fill="#fff">3</text>
+<rect x="226" y="128" width="54" height="54" fill="#d62728" opacity="0.85"/>
+<text x="253" y="152" text-anchor="middle" fill="#fff">lost</text>
+<text x="253" y="170" text-anchor="middle" fill="#fff">4</text>
+<rect x="284" y="128" width="54" height="54" fill="#d62728" opacity="0.85"/>
+<text x="311" y="152" text-anchor="middle" fill="#fff">lost</text>
+<text x="311" y="170" text-anchor="middle" fill="#fff">4</text>
+<rect x="342" y="128" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="369" y="152" text-anchor="middle" fill="#fff">tick</text>
+<text x="369" y="170" text-anchor="middle" fill="#fff">6</text>
+<rect x="400" y="128" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="427" y="152" text-anchor="middle" fill="#fff">tick</text>
+<text x="427" y="170" text-anchor="middle" fill="#fff">7</text>
+<rect x="458" y="128" width="54" height="54" fill="#d62728" opacity="0.85"/>
+<text x="485" y="152" text-anchor="middle" fill="#fff">lost</text>
+<text x="485" y="170" text-anchor="middle" fill="#fff">8</text>
+<rect x="516" y="128" width="54" height="54" fill="#d62728" opacity="0.85"/>
+<text x="543" y="152" text-anchor="middle" fill="#fff">lost</text>
+<text x="543" y="170" text-anchor="middle" fill="#fff">8</text>
+<rect x="574" y="128" width="54" height="54" fill="#2ca02c" opacity="0.85"/>
+<text x="601" y="152" text-anchor="middle" fill="#fff">tick</text>
+<text x="601" y="170" text-anchor="middle" fill="#fff">10</text>
+</svg>
