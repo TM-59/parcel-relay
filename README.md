@@ -12,6 +12,8 @@ The screen shows closures before you choose. Avoid dispatching a shortcut across
 
 Captured from the real CLI demo on 2026-11-06; its stdout is rendered in a monospace viewer for the image. The game runs in a terminal.
 
+**Theory handbook**: [docs/theory/](docs/theory/README.md) — 8 statements (a courier as a process, the two routes, the concurrent tick, the scheduled closures, supervision and restart, winning and losing, the soonest win, the screen), each with its rule, assumptions, derivation, code, tests and a figure. `make theory-figs` regenerates the figures and the measured values by playing the real game; `make theory-check` checks the coverage table.
+
 ## Install and play
 
 Linux x86-64, no sudo or containers. Install the current stable runtime as checked on 2026-11-06 ([Elixir installation](https://elixir-lang.org/install/)).
