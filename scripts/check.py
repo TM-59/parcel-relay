@@ -19,27 +19,19 @@ folder = Path("test-results") / run_id
 folder.mkdir(parents=True)
 suites = []
 for kind, command in [("unit", cfg["unit"])] + (
-        [("e2e", cfg["play"])] if sys.argv[1] == "check" else []):
+        [("e2e", cfg["e2e"])] if sys.argv[1] == "check" else []):
     tick = time.monotonic()
     code = 1
     try:
         result = sp.run(command, env=dict(os.environ, RESULT_DIR=str(folder.resolve())),
-                        input=cfg["demo"] if kind == "e2e" else None, text=True,
+                        text=True,
                         capture_output=True, timeout=180)
         code = result.returncode
         (folder / (kind + ".log")).write_text(result.stdout + result.stderr)
         print(result.stdout, result.stderr)
-        if kind == "e2e":
-            code = int(code != 0 or "WON" not in result.stdout)
     except (OSError, sp.TimeoutExpired) as error:
         (folder / (kind + ".log")).write_text(str(error))
     report = folder / (kind + ".xml")
-    if kind == "e2e":
-        root = ET.Element("testsuite", tests="1", failures=str(code), errors="0")
-        case = ET.SubElement(root, "testcase", name="REQ-finish real CLI victory")
-        if code:
-            ET.SubElement(case, "failure", message="CLI did not reach WON")
-        ET.ElementTree(root).write(report, encoding="unicode")
     counts = dict(tests=0, failures=0, errors=0, skipped=0)
     if report.exists():
         cases = list(ET.parse(report).getroot().iter("testcase"))
@@ -49,7 +41,7 @@ for kind, command in [("unit", cfg["unit"])] + (
     suites.append(dict(kind=kind, framework=cfg["language"] if kind == "unit" else "CLI harness",
         command=command, status="pass" if passed else "error", duration_seconds=time.monotonic()-tick,
         counts=counts, junit=str(report) if report.exists() else None,
-        requirements=["REQ-finish"], reason=None if passed else "See local log"))
+        requirements=["REQ-finish", "REQ-result", "REQ-session", "REQ-seed"], reason=None if passed else "See local log"))
 finished = dt.datetime.now(dt.UTC)
 counts = {k: sum(s["counts"][k] for s in suites) for k in suites[0]["counts"]}
 passed = all(s["status"] == "pass" for s in suites)

@@ -34,6 +34,11 @@ for line in index.splitlines():
 if not rows:
     fail("coverage table not found in docs/theory/README.md")
 
+readme = (ROOT / "README.md").read_text(encoding="utf-8")
+count = re.search(r"— (\d+) statements", readme)
+if not count or int(count.group(1)) != len(rows):
+    fail("README statement count does not match the coverage table")
+
 # 2. page sections: each "## Sxx" has a figure (image or mermaid) before the next section, and the listed parts in order
 sections = {}
 for name, text in pages.items():

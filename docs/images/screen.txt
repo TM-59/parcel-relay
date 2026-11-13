@@ -1,7 +1,13 @@
-PARCEL RELAY | WON
-Deliver 4 parcels before tick 10 | tick 6/10 | delivered 4/4
-
+PARCEL RELAY | LOST | seed 59
+Goal: 4 by tick 10 | tick 10/10 | delivered 0/4 | lost 4
+Safe: 3 ticks | Short: 2 ticks; bridge CLOSED 4 and 8
   Courier 1: READY
   Courier 2: READY
-
-1 / 2: dispatch to a READY courier | t: advance BOTH | q: quit
+Both couriers advanced.
+RESULT: delivered 0 | late 0 | lost 4
+Goal shortfall: 4 (4 minus delivered; late = on road at tick 10)
+#1 C1: LOST tick 4: SHORT bridge closed (sent 2).
+#2 C2: LOST tick 4: SHORT bridge closed (sent 2).
+#3 C1: LOST tick 8: SHORT bridge closed (sent 6).
+#4 C2: LOST tick 8: SHORT bridge closed (sent 6).
+r: retry same seed | n: next seed | q: quit
