@@ -13,5 +13,9 @@
     "-e",
     "ParcelRelay.main()"
   ],
-  "demo": "1\n2\nt\nt\nt\n1\n2\nt\nt\nt\n"
+  "demo": "1\n2\nt\nt\nt\n1\n2\nt\nt\nt\n",
+  "e2e": [
+    "python3.14",
+    "scripts/cli_smoke.py"
+  ]
 }

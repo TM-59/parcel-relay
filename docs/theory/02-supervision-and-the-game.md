@@ -31,7 +31,7 @@ flowchart TD
 
 ## S06 — Four deliveries by tick ten
 
-**Statement.** The game is **won** as soon as 4 parcels have been delivered and **lost** when tick 10 is reached with fewer. A delivery on tick 10 itself counts. A finished game ignores every further command. A command that is not one of `1`, `2`, `1s`, `2s`, `t` changes nothing and costs no tick.
+**Statement.** The game is **won** as soon as 4 parcels have been delivered and **lost** when tick 10 is reached with fewer. A delivery on tick 10 itself counts. The `act` function ignores further commands on a finished game value; the CLI handles r/n/q separately (S11). While playing, a command that is not one of `1`, `2`, `1s`, `2s`, `t` changes nothing and costs no tick.
 
 **Assumptions and where they break.** Winning is checked before losing, so four deliveries on tick 10 is a win.
 
@@ -45,8 +45,8 @@ stateDiagram-v2
     Playing --> Playing: anything else — nothing changes
     Playing --> Won: t — the fourth delivery
     Playing --> Lost: t — tick 10 with fewer than 4
-    Won --> Won: every command ignored
-    Lost --> Lost: every command ignored
+    Won --> Won: act commands ignored
+    Lost --> Lost: act commands ignored
 ```
 
 **Code.** `status` and `act` in `lib/parcel_relay.ex`; `screen` shows the status line; `main` runs the loop and stops the supervisor on exit.
@@ -57,7 +57,7 @@ stateDiagram-v2
 
 **Statement.** When both couriers follow the same list of routes, dispatching as soon as they are READY, the earliest possible win is **tick 5**, reached by starting short and continuing safe. All-safe wins on tick 6. All-short also ends on tick 6, but loses two parcels to the tick-4 closure on the way.
 
-**Assumptions and where they break.** The search covers the sixteen lists of four routes with both couriers on the same list and no waiting; a player may also wait or give the couriers different routes, which is not searched here.
+**Assumptions and where they break.** This is the default seed 59. The search covers the sixteen lists of four routes with both couriers on the same list and no waiting; a player may also wait or give the couriers different routes, which is not searched here.
 
 **Derivation.** By S04 a short parcel dispatched at tick 0 arrives on tick 2, but one dispatched at tick 2 is lost on tick 4. So the second parcel of each courier should be safe: dispatched at tick 2, delivered on tick 5 (S02). Two couriers deliver 2 parcels on tick 2 and 2 more on tick 5. The all-safe plan needs two rounds of three ticks. The table of all sixteen lists is produced by playing each through the real game.
 
@@ -77,10 +77,10 @@ stateDiagram-v2
 
 ```mermaid
 flowchart LR
-    G["game value: ticks, delivered, lost, notice"] --> S["screen"]
+    G["game value: ticks, delivered, lost, notice"] --> S["screen plus result when finished"]
     C1["courier 1: position"] --> S
     C2["courier 2: position"] --> S
-    S --> T["six lines of text"]
+    S --> T["one terminal screen"]
     T --> L["main loop: clear, print, read one command, act"]
 ```
 

@@ -15,7 +15,7 @@ end
 defmodule ParcelRelay do
   @moduledoc "Two supervised couriers; short routes trade time for scheduled bridge outages."
   @closure_ticks [4, 8]
-  def start do
+  def start(seed \\ 59) when is_integer(seed) and seed >= 0 do
     children = for id <- 1..2, do: Supervisor.child_spec({ParcelRelay.Courier, []}, id: id)
 
     {:ok, supervisor} =
@@ -24,8 +24,20 @@ defmodule ParcelRelay do
         max_restarts: length(children) * length(@closure_ticks)
       )
 
-    %{supervisor: supervisor, workers: [1, 2], ticks: 0, delivered: 0, lost: 0, notice: ""}
+    %{
+      supervisor: supervisor,
+      workers: [1, 2],
+      seed: seed,
+      closures: Enum.map(@closure_ticks, &(&1 + rem(seed + 2, 3) - 1)),
+      ticks: 0,
+      delivered: 0,
+      lost: 0,
+      parcels: [],
+      notice: ""
+    }
   end
+
+  def stop(game), do: Supervisor.stop(game.supervisor)
 
   def worker(game, id) do
     Enum.find_value(Supervisor.which_children(game.supervisor), fn
@@ -46,7 +58,18 @@ defmodule ParcelRelay do
     id = command |> String.first() |> String.to_integer()
     route = if String.ends_with?(command, "s"), do: :short, else: :safe
     reply = GenServer.call(worker(game, id), {:dispatch, route})
-    %{game | notice: "Courier #{id}: #{reply} (#{route})"}
+
+    parcel = %{
+      id: length(game.parcels) + 1,
+      courier: id,
+      route: route,
+      sent: game.ticks,
+      outcome: :moving,
+      tick: nil
+    }
+
+    parcels = if reply == :ok, do: game.parcels ++ [parcel], else: game.parcels
+    %{game | parcels: parcels, notice: "Courier #{id}: #{reply} (#{route})"}
   end
 
   defp apply_command(game, "t") do
@@ -57,12 +80,22 @@ defmodule ParcelRelay do
       |> Task.async_stream(fn id -> advance(game, id, tick) end, max_concurrency: 2)
       |> Enum.map(fn {:ok, outcome} -> outcome end)
 
-    lost = Enum.count(outcomes, &(&1 == :lost))
+    lost = Enum.count(outcomes, fn {_, outcome} -> outcome == :lost end)
+
+    parcels =
+      Enum.map(game.parcels, fn parcel ->
+        {_, outcome} = List.keyfind(outcomes, parcel.courier, 0)
+
+        if parcel.outcome == :moving and outcome in [:lost, :delivered],
+          do: %{parcel | outcome: outcome, tick: tick},
+          else: parcel
+      end)
 
     %{
       game
       | ticks: tick,
-        delivered: game.delivered + Enum.count(outcomes, &(&1 == :delivered)),
+        parcels: parcels,
+        delivered: game.delivered + Enum.count(outcomes, fn {_, o} -> o == :delivered end),
         lost: game.lost + lost,
         notice:
           if(lost > 0,
@@ -77,16 +110,16 @@ defmodule ParcelRelay do
   defp advance(game, id, tick) do
     pid = worker(game, id)
 
-    case GenServer.call(pid, :position) do
-      {left, :short} when left > 0 and tick in @closure_ticks ->
-        ref = Process.monitor(pid)
-        Process.exit(pid, :kill)
-        receive do: ({:DOWN, ^ref, :process, ^pid, _} -> :ok)
-        await_restart(game, id, pid, 1000)
-        :lost
+    {left, route} = GenServer.call(pid, :position)
 
-      _ ->
-        if GenServer.call(pid, :tick), do: :delivered, else: :moving
+    if left > 0 and route == :short and tick in game.closures do
+      ref = Process.monitor(pid)
+      Process.exit(pid, :kill)
+      receive do: ({:DOWN, ^ref, :process, ^pid, _} -> :ok)
+      await_restart(game, id, pid, 1000)
+      {id, :lost}
+    else
+      {id, if(GenServer.call(pid, :tick), do: :delivered, else: :moving)}
     end
   end
 
@@ -103,6 +136,32 @@ defmodule ParcelRelay do
     end
   end
 
+  def result(game) do
+    late =
+      if status(game) == :lost, do: Enum.count(game.parcels, &(&1.outcome == :moving)), else: 0
+
+    failures =
+      for parcel <- game.parcels,
+          parcel.outcome == :lost or (status(game) == :lost and parcel.outcome == :moving) do
+        if parcel.outcome == :lost do
+          "##{parcel.id} C#{parcel.courier}: LOST tick #{parcel.tick}: SHORT bridge closed (sent #{parcel.sent})."
+        else
+          duration = if parcel.route == :short, do: 2, else: 3
+          left = parcel.sent + duration - game.ticks
+
+          "##{parcel.id} C#{parcel.courier}: LATE tick #{game.ticks}: #{parcel.route} needs #{left} tick(s) (sent #{parcel.sent})."
+        end
+      end
+
+    %{
+      delivered: game.delivered,
+      lost: game.lost,
+      late: late,
+      shortfall: max(0, 4 - game.delivered),
+      failures: failures
+    }
+  end
+
   def screen(game) do
     lanes =
       for id <- game.workers do
@@ -114,39 +173,69 @@ defmodule ParcelRelay do
 
     Enum.join(
       [
-        "PARCEL RELAY | #{String.upcase(to_string(status(game)))}",
-        "Deliver 4 parcels by tick 10 | tick #{game.ticks}/10 | delivered #{game.delivered}/4 | lost #{game.lost}",
-        "Safe: 3 ticks | Short: 2 ticks, bridge CLOSED at ticks #{Enum.join(@closure_ticks, " and ")}",
+        "PARCEL RELAY | #{String.upcase(to_string(status(game)))} | seed #{game.seed}",
+        "Goal: 4 by tick 10 | tick #{game.ticks}/10 | delivered #{game.delivered}/4 | lost #{game.lost}",
+        "Safe: 3 ticks | Short: 2 ticks; bridge CLOSED #{Enum.join(game.closures, " and ")}",
         Enum.join(lanes, "\n"),
         game.notice,
-        "1 / 2: SAFE dispatch | 1s / 2s: SHORT dispatch | t: advance BOTH | q: quit"
+        if(status(game) == :playing,
+          do: "1 / 2: SAFE | 1s / 2s: SHORT | t: advance BOTH | q: quit",
+          else: result_screen(game)
+        )
       ],
       "\n"
     )
   end
 
-  def main do
-    game = start()
+  defp result_screen(game) do
+    r = result(game)
 
-    try do
-      loop(game)
-    after
-      Supervisor.stop(game.supervisor)
+    Enum.join(
+      [
+        "RESULT: delivered #{r.delivered} | late #{r.late} | lost #{r.lost}",
+        "Goal shortfall: #{r.shortfall} (4 minus delivered; late = on road at tick 10)"
+      ] ++
+        r.failures ++
+        [
+          "r: retry same seed | n: next seed | q: quit"
+        ],
+      "\n"
+    )
+  end
+
+  def main(seed \\ 59), do: session(seed)
+
+  defp session(seed) do
+    game = start(seed)
+
+    next =
+      try do
+        loop(game)
+      after
+        stop(game)
+      end
+
+    case next do
+      :retry -> session(seed)
+      :next -> session(seed + 1)
+      :quit -> :ok
     end
   end
 
   defp loop(game) do
     IO.puts("\e[2J\e[H" <> screen(game))
 
-    if status(game) == :playing do
-      case IO.gets("> ") do
-        nil ->
-          :ok
+    case IO.gets("> ") do
+      eof when eof in [nil, :eof] ->
+        :quit
 
-        line ->
-          command = String.trim(line)
-          if command != "q", do: loop(act(game, command))
-      end
+      line ->
+        case {String.trim(line), status(game)} do
+          {"q", _} -> :quit
+          {"r", state} when state != :playing -> :retry
+          {"n", state} when state != :playing -> :next
+          {command, _} -> loop(act(game, command))
+        end
     end
   end
 end

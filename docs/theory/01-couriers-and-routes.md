@@ -2,6 +2,8 @@
 
 Two couriers, each a real process, carry parcels on a safe or a short route while a bridge closes on schedule. Measured numbers are quoted by their id in [figures/values.md](figures/values.md).
 
+The original route measurements on this page use seed 59 (bridge closures 4 and 8). See S09 for other seeds.
+
 [Back to the index](README.md)
 
 ## S01 — A courier is a process with two numbers
