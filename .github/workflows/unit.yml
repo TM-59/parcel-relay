@@ -1,7 +1,7 @@
 name: unit
 on:
   pull_request:
-    paths: ['lib/**', 'src/**', 'test/**', 'config/**', 'mix.*', 'Project.toml', 'Manifest.toml', 'scripts/**', 'Makefile', '.formatter.exs', '.github/workflows/**']
+    paths: ['lib/**', 'src/**', 'test/**', 'config/**', 'mix.*', 'Project.toml', 'Manifest.toml', 'scripts/**', 'Makefile', '.formatter.exs', '.credo.exs', 'pyproject.toml', 'uv.lock', '.python-version', '.github/workflows/**']
 concurrency:
   group: unit-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -10,18 +10,20 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: '3.14'
       - uses: erlef/setup-beam@v1
         with:
           otp-version: '29.1'
           elixir-version: '1.20.5'
+      - uses: actions/cache@v4
+        with:
+          path: _build/plts
+          key: plts-otp29.1-elixir1.20.5-${{ hashFiles('mix.lock') }}
       - run: mix deps.get
-        env:
-          MIX_ENV: test
-      - run: mix format --check-formatted
+      - run: make check-style
       - run: make test
