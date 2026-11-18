@@ -28,19 +28,20 @@ curl -fsSLo install.sh https://elixir-lang.org/install.sh
 sh install.sh elixir@1.20.5 otp@29.1
 export PATH="$HOME/.elixir-install/installs/otp/29.1/bin:$HOME/.elixir-install/installs/elixir/1.20.5-otp-29/bin:$PATH"
 mix local.hex --force
-MIX_ENV=test mix deps.get
+mix deps.get
 ```
 
-Python 3.14 is required by the local report adapter. From this repository:
+The local report adapter runs on Python 3.14 through [uv](https://docs.astral.sh/uv/) (`uv run --locked`). From this repository:
 
 ```sh
 make play
 make demo
 make test
 make check
+make check-style   # mix format, Credo, Dialyzer; Ruff and mypy for scripts/
 ```
 
-`test` runs native unit tests; `check` also drives six real CLI scenarios: victory, repeated failure/retry/next/quit, lateness, quitting during play, and EOF during play and at a result. Each checks that the CLI leaves no live process in its OS process group (Linux). JUnit XML and schema-versioned summary JSON go to ignored `test-results/`. No test contacts a live service. PR CI runs unit checks only.
+`test` runs native unit tests; `check` also drives six real CLI scenarios: victory, repeated failure/retry/next/quit, lateness, quitting during play, and EOF during play and at a result. Each checks that the CLI leaves no live process in its OS process group (Linux). JUnit XML and schema-versioned summary JSON go to ignored `test-results/`. No test contacts a live service. PR CI runs `make check-style` and the unit tests only.
 
 M3 is implemented. Terminal accessibility, Windows and macOS execution, long sessions and player enjoyment are unverified.
 
