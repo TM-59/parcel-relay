@@ -2,18 +2,35 @@
 
 import json
 import os
-from pathlib import Path
 import signal
 import subprocess as sp
+import sys
 import time
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET  # writes the report; nothing untrusted is parsed
+from contextlib import suppress
+from pathlib import Path
 
 cfg = json.loads(Path("scripts/commands.json").read_text())
 folder = Path(os.environ["RESULT_DIR"])
 lose = "t\nt\n1s\n2s\nt\nt\nt\nt\n1s\n2s\nt\nt\nt\nt\n"
+STARTS_SEEN = 3  # first round, retry, next round
+RESULTS_SEEN = 2  # the two lost rounds
+SCREEN_ROWS, SCREEN_COLUMNS = 24, 80
+CLI_SECONDS = 20
 
 
-def group_alive(group):
+class SmokeError(Exception):
+    """A CLI session did not behave as the case expects."""
+
+
+def expect(*, condition: bool, message: str) -> None:
+    """Raise SmokeError with `message` unless `condition` holds."""
+    if not condition:
+        raise SmokeError(message)
+
+
+def group_alive(group: int) -> bool:
+    """Return whether any live (non-zombie) process belongs to session group `group`."""
     for path in Path("/proc").glob("[0-9]*/stat"):
         try:
             fields = path.read_text().rsplit(") ", 1)[1].split()
@@ -24,20 +41,68 @@ def group_alive(group):
     return False
 
 
-def check_rounds(stdout):
+def check_rounds(stdout: str) -> None:
+    """Check that retry repeats the round exactly and next starts a different seed."""
     screens = stdout.split("\x1b[2J\x1b[H")[1:]
     starts = [s for s in screens if "tick 0/10" in s]
     results = [s for s in screens if "PARCEL RELAY | LOST" in s]
-    assert len(starts) == 3 and starts[0] == starts[1]
-    assert len(results) == 2 and results[0] == results[1]
-    assert "seed 60" in starts[2] and "bridge CLOSED 5 and 9" in starts[2]
-    assert "delivered 0/4 | lost 0" in starts[2]
+    expect(condition=len(starts) == STARTS_SEEN, message="expected three round starts")
+    expect(condition=starts[0] == starts[1], message="retry did not repeat the round")
+    expect(condition=len(results) == RESULTS_SEEN, message="expected two result screens")
+    expect(condition=results[0] == results[1], message="the two results differ")
+    expect(condition="seed 60" in starts[2], message="next did not move to seed 60")
+    expect(condition="bridge CLOSED 5 and 9" in starts[2], message="seed 60 bridge closures")
+    expect(condition="delivered 0/4 | lost 0" in starts[2], message="next round is not fresh")
     for screen in results:
-        assert "RESULT: delivered 0 | late 0 | lost 4" in screen
-        assert "#1 C1: LOST tick 4" in screen and "#4 C2: LOST tick 8" in screen
+        expect(
+            condition="RESULT: delivered 0 | late 0 | lost 4" in screen,
+            message="result line differs",
+        )
+        expect(condition="#1 C1: LOST tick 4" in screen, message="first loss line differs")
+        expect(condition="#4 C2: LOST tick 8" in screen, message="last loss line differs")
         lines = screen.removesuffix("> ").strip().splitlines()
-        assert len(lines) <= 24 and max(map(len, lines)) <= 80
+        expect(
+            condition=len(lines) <= SCREEN_ROWS and max(map(len, lines)) <= SCREEN_COLUMNS,
+            message="result screen is larger than 80 x 24",
+        )
     (folder / "result-screen.txt").write_text(results[0].removesuffix("> ").rstrip() + "\n")
+
+
+def run_case(commands: str, expected: str | None, name: str) -> sp.Popen[str]:
+    """Play one session with `commands` as input and check its output and process group."""
+    process = sp.Popen(
+        ["mix", "run", "-e", "ParcelRelay.main()"],
+        stdin=sp.PIPE,
+        stdout=sp.PIPE,
+        stderr=sp.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = process.communicate(commands, timeout=CLI_SECONDS)
+        (folder / (name + ".log")).write_text(stdout + stderr)
+        expect(
+            condition=process.returncode == 0,
+            message=f"CLI exit {process.returncode}: {stderr}",
+        )
+        expect(condition=not stderr.strip(), message=stderr)
+        if expected:
+            expect(condition=expected in stdout, message=f"Missing output: {expected}")
+        else:
+            check_rounds(stdout)
+        deadline = time.monotonic() + 1
+        while group_alive(process.pid) and time.monotonic() < deadline:
+            time.sleep(0.01)
+        expect(
+            condition=not group_alive(process.pid),
+            message="CLI left a live process in its session group",
+        )
+    finally:
+        if process.poll() is None or group_alive(process.pid):
+            with suppress(ProcessLookupError):
+                os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
+    return process
 
 
 cases = [
@@ -53,40 +118,14 @@ failures = 0
 for name, commands, expected in cases:
     started = time.monotonic()
     case = ET.SubElement(root, "testcase", name="REQ-session " + name)
-    process = None
     try:
-        process = sp.Popen(
-            cfg["play"],
-            stdin=sp.PIPE,
-            stdout=sp.PIPE,
-            stderr=sp.PIPE,
-            text=True,
-            start_new_session=True,
-        )
-        stdout, stderr = process.communicate(commands, timeout=20)
-        (folder / (name + ".log")).write_text(stdout + stderr)
-        assert process.returncode == 0, f"CLI exit {process.returncode}: {stderr}"
-        assert not stderr.strip(), stderr
-        if expected:
-            assert expected in stdout, f"Missing output: {expected}"
-        else:
-            check_rounds(stdout)
-        deadline = time.monotonic() + 1
-        while group_alive(process.pid) and time.monotonic() < deadline:
-            time.sleep(0.01)
-        assert not group_alive(process.pid), "CLI left a live process in its session group"
-        print(name + ": pass; process group stopped")
-    except (AssertionError, OSError, sp.TimeoutExpired) as error:
+        run_case(commands, expected, name)
+        sys.stdout.write(name + ": pass; process group stopped\n")
+    except (SmokeError, OSError, sp.TimeoutExpired) as error:
         failures += 1
         ET.SubElement(case, "failure", message=str(error)).text = str(error)
-        print(name + ": FAIL: " + str(error))
+        sys.stdout.write(name + ": FAIL: " + str(error) + "\n")
     finally:
-        if process is not None and (process.poll() is None or group_alive(process.pid)):
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            process.wait()
         case.set("time", str(time.monotonic() - started))
 root.set("failures", str(failures))
 ET.ElementTree(root).write(folder / "e2e.xml", encoding="unicode")
