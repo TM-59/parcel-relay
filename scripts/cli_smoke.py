@@ -1,4 +1,5 @@
 """Drive the real terminal program and check round boundaries and process exit."""
+
 import json
 import os
 from pathlib import Path
@@ -18,7 +19,7 @@ def group_alive(group):
             fields = path.read_text().rsplit(") ", 1)[1].split()
             if int(fields[2]) == group and fields[0] != "Z":
                 return True
-        except (OSError, IndexError, ValueError):
+        except OSError, IndexError, ValueError:
             continue
     return False
 
@@ -54,8 +55,14 @@ for name, commands, expected in cases:
     case = ET.SubElement(root, "testcase", name="REQ-session " + name)
     process = None
     try:
-        process = sp.Popen(cfg["play"], stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE,
-                           text=True, start_new_session=True)
+        process = sp.Popen(
+            cfg["play"],
+            stdin=sp.PIPE,
+            stdout=sp.PIPE,
+            stderr=sp.PIPE,
+            text=True,
+            start_new_session=True,
+        )
         stdout, stderr = process.communicate(commands, timeout=20)
         (folder / (name + ".log")).write_text(stdout + stderr)
         assert process.returncode == 0, f"CLI exit {process.returncode}: {stderr}"
