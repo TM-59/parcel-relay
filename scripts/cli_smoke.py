@@ -3,6 +3,7 @@
 
 import json
 import os
+import shutil
 import signal
 import subprocess as sp
 import sys
@@ -18,6 +19,18 @@ STARTS_SEEN = 3  # first round, retry, next round
 RESULTS_SEEN = 2  # the two lost rounds
 SCREEN_ROWS, SCREEN_COLUMNS = 24, 80
 CLI_SECONDS = 20
+
+
+def tool(name: str) -> str:
+    """Return the absolute path of program `name` on PATH, or stop with a clear message."""
+    path = shutil.which(name)
+    if path is None:
+        message = f"{name} was not found on PATH; install it (see README) and run again"
+        raise SystemExit(message)
+    return path
+
+
+MIX = tool("mix")
 
 
 class SmokeError(Exception):
@@ -72,7 +85,7 @@ def check_rounds(stdout: str) -> None:
 def run_case(commands: str, expected: str | None, name: str) -> sp.Popen[str]:
     """Play one session with `commands` as input and check its output and process group."""
     process = sp.Popen(
-        ["mix", "run", "-e", "ParcelRelay.main()"],
+        [MIX, "run", "-e", "ParcelRelay.main()"],
         stdin=sp.PIPE,
         stdout=sp.PIPE,
         stderr=sp.PIPE,
