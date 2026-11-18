@@ -54,32 +54,23 @@ defmodule TheoryFigs do
     with_game(fn game ->
       game = play(game, List.duplicate("t", wait) ++ [if(route == :short, do: "1s", else: "1")])
 
-      Enum.reduce_while(1..4, game, fn _, g ->
-        g = ParcelRelay.act(g, "t")
-
-        cond do
-          g.lost > 0 -> {:halt, {:lost, g.ticks}}
-          g.delivered > 0 -> {:halt, {:delivered, g.ticks}}
-          g.ticks >= 10 -> {:halt, {:none, g.ticks}}
-          true -> {:cont, g}
-        end
-      end)
+      Enum.reduce_while(1..4, game, fn _, g -> single_tick(ParcelRelay.act(g, "t")) end)
     end)
+  end
+
+  defp single_tick(g) do
+    cond do
+      g.lost > 0 -> {:halt, {:lost, g.ticks}}
+      g.delivered > 0 -> {:halt, {:delivered, g.ticks}}
+      g.ticks >= 10 -> {:halt, {:none, g.ticks}}
+      true -> {:cont, g}
+    end
   end
 
   @doc "Both couriers follow the same list of routes, each dispatched as soon as the courier is READY."
   def plan(routes) do
     with_game(fn game ->
-      {game, _} =
-        Enum.reduce_while(1..10, {game, {routes, routes}}, fn _, {g, {r1, r2}} ->
-          {g, r1} = dispatch(g, 1, r1)
-          {g, r2} = dispatch(g, 2, r2)
-          g = ParcelRelay.act(g, "t")
-
-          if ParcelRelay.status(g) == :playing,
-            do: {:cont, {g, {r1, r2}}},
-            else: {:halt, {g, {r1, r2}}}
-        end)
+      {game, _} = Enum.reduce_while(1..10, {game, {routes, routes}}, &plan_tick/2)
 
       %{
         status: ParcelRelay.status(game),
@@ -88,6 +79,16 @@ defmodule TheoryFigs do
         lost: game.lost
       }
     end)
+  end
+
+  defp plan_tick(_, {g, {r1, r2}}) do
+    {g, r1} = dispatch(g, 1, r1)
+    {g, r2} = dispatch(g, 2, r2)
+    g = ParcelRelay.act(g, "t")
+
+    if ParcelRelay.status(g) == :playing,
+      do: {:cont, {g, {r1, r2}}},
+      else: {:halt, {g, {r1, r2}}}
   end
 
   defp dispatch(game, _id, []), do: {game, []}
@@ -199,6 +200,19 @@ defmodule TheoryFigs do
 
   def colours, do: {@green, @red, @blue, @grey}
 
+  @doc "Both couriers lost to closures, twice: changed pids, live and ready couriers, restarts."
+  def supervision(game) do
+    before = for id <- 1..2, do: ParcelRelay.worker(game, id)
+    game = play(game, ["t", "t", "1s", "2s", "t", "t"])
+    now = for id <- 1..2, do: ParcelRelay.worker(game, id)
+    ready = for pid <- now, do: GenServer.call(pid, :position) |> elem(0)
+    alive_now = Enum.count(now, &Process.alive?/1)
+    game2 = play(game, ["t", "t", "1s", "2s", "t", "t"])
+
+    {Enum.count(Enum.zip(before, now), fn {a, b} -> a != b end), alive_now,
+     Enum.count(ready, &(&1 == 0)), {game2.lost, Process.alive?(game2.supervisor)}}
+  end
+
   def run do
     File.mkdir_p!(@dir)
 
@@ -232,18 +246,7 @@ defmodule TheoryFigs do
     safe_lost = Enum.count(0..8, &match?({:lost, _}, grid[{:safe, &1}]))
 
     # S05: supervision
-    {pids_differ, alive, ready, restarts} =
-      with_game(fn game ->
-        before = for id <- 1..2, do: ParcelRelay.worker(game, id)
-        game = play(game, ["t", "t", "1s", "2s", "t", "t"])
-        now = for id <- 1..2, do: ParcelRelay.worker(game, id)
-        ready = for pid <- now, do: GenServer.call(pid, :position) |> elem(0)
-        alive_now = Enum.count(now, &Process.alive?/1)
-        game2 = play(game, ["t", "t", "1s", "2s", "t", "t"])
-
-        {Enum.count(Enum.zip(before, now), fn {a, b} -> a != b end), alive_now,
-         Enum.count(ready, &(&1 == 0)), {game2.lost, Process.alive?(game2.supervisor)}}
-      end)
+    {pids_differ, alive, ready, restarts} = with_game(&supervision/1)
 
     # S06: the end of a game
     frozen =
@@ -268,7 +271,7 @@ defmodule TheoryFigs do
     winners = Enum.filter(results, fn {_, r} -> r.status == :won end)
     best = winners |> Enum.map(fn {_, r} -> r.ticks end) |> Enum.min()
     best_plans = for {routes, r} <- winners, r.ticks == best, do: routes
-    label = fn routes -> routes |> Enum.map(&Atom.to_string/1) |> Enum.join(", ") end
+    label = fn routes -> Enum.map_join(routes, ", ", &Atom.to_string/1) end
 
     shown =
       [

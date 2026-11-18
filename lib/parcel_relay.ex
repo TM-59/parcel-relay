@@ -1,4 +1,9 @@
 defmodule ParcelRelay.Courier do
+  @moduledoc """
+  One courier as a supervised process: ticks left on its current parcel and the route taken.
+
+  A courier at 0 ticks is ready; dispatching a busy courier is refused.
+  """
   use GenServer
   def start_link(_), do: GenServer.start_link(__MODULE__, {0, :safe})
   def init(state), do: {:ok, state}
@@ -142,16 +147,8 @@ defmodule ParcelRelay do
 
     failures =
       for parcel <- game.parcels,
-          parcel.outcome == :lost or (status(game) == :lost and parcel.outcome == :moving) do
-        if parcel.outcome == :lost do
-          "##{parcel.id} C#{parcel.courier}: LOST tick #{parcel.tick}: SHORT bridge closed (sent #{parcel.sent})."
-        else
-          duration = if parcel.route == :short, do: 2, else: 3
-          left = parcel.sent + duration - game.ticks
-
-          "##{parcel.id} C#{parcel.courier}: LATE tick #{game.ticks}: #{parcel.route} needs #{left} tick(s) (sent #{parcel.sent})."
-        end
-      end
+          parcel.outcome == :lost or (status(game) == :lost and parcel.outcome == :moving),
+          do: failure_line(game, parcel)
 
     %{
       delivered: game.delivered,
@@ -160,6 +157,17 @@ defmodule ParcelRelay do
       shortfall: max(0, 4 - game.delivered),
       failures: failures
     }
+  end
+
+  defp failure_line(_game, %{outcome: :lost} = parcel) do
+    "##{parcel.id} C#{parcel.courier}: LOST tick #{parcel.tick}: SHORT bridge closed (sent #{parcel.sent})."
+  end
+
+  defp failure_line(game, parcel) do
+    duration = if parcel.route == :short, do: 2, else: 3
+    left = parcel.sent + duration - game.ticks
+
+    "##{parcel.id} C#{parcel.courier}: LATE tick #{game.ticks}: #{parcel.route} needs #{left} tick(s) (sent #{parcel.sent})."
   end
 
   def screen(game) do
