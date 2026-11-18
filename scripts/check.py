@@ -5,6 +5,7 @@ import datetime as dt
 import json
 import os
 import platform
+import shutil
 import subprocess as sp
 import sys
 import time
@@ -18,24 +19,37 @@ if TYPE_CHECKING:
 
 TIMEOUT_SECONDS = 180
 REQUIREMENTS = ["REQ-finish", "REQ-result", "REQ-session", "REQ-seed"]
-UNIT_COMMAND = ["mix", "test", "--seed", "59"]
-E2E_COMMAND = [sys.executable, "scripts/cli_smoke.py"]
 
 cfg = json.loads(Path("scripts/commands.json").read_text())
 mode = sys.argv[1]
 
 
+def tool(name: str) -> str:
+    """Return the absolute path of program `name` on PATH, or stop with a clear message."""
+    path = shutil.which(name)
+    if path is None:
+        message = f"{name} was not found on PATH; install it (see README) and run again"
+        raise SystemExit(message)
+    return path
+
+
+MIX = tool("mix")
+GIT = tool("git")
+UNIT_COMMAND = [MIX, "test", "--seed", "59"]
+E2E_COMMAND = [sys.executable, "scripts/cli_smoke.py"]
+
+
 def play(demo_input: str | None) -> int:
     """Run the game in the terminal, optionally feeding the demo input; return its exit code."""
     return sp.run(
-        ["mix", "run", "-e", "ParcelRelay.main()"], input=demo_input, text=True, check=False
+        [MIX, "run", "-e", "ParcelRelay.main()"], input=demo_input, text=True, check=False
     ).returncode
 
 
 def unit(env: dict[str, str]) -> sp.CompletedProcess[str]:
     """Run the ExUnit suite with the fixed seed."""
     return sp.run(
-        ["mix", "test", "--seed", "59"],
+        UNIT_COMMAND,
         env=env,
         text=True,
         capture_output=True,
@@ -47,7 +61,7 @@ def unit(env: dict[str, str]) -> sp.CompletedProcess[str]:
 def e2e(env: dict[str, str]) -> sp.CompletedProcess[str]:
     """Drive the real terminal program through the CLI smoke."""
     return sp.run(
-        [sys.executable, "scripts/cli_smoke.py"],
+        E2E_COMMAND,
         env=env,
         text=True,
         capture_output=True,
@@ -116,8 +130,8 @@ summary = {
     "schema_version": 1,
     "run_id": run_id,
     "repository": cfg["repository"],
-    "commit": sp.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-    "dirty": bool(sp.check_output(["git", "status", "--porcelain"])),
+    "commit": sp.check_output([GIT, "rev-parse", "HEAD"], text=True).strip(),
+    "dirty": bool(sp.check_output([GIT, "status", "--porcelain"])),
     "started_at": started.isoformat(),
     "finished_at": finished.isoformat(),
     "duration_seconds": (finished - started).total_seconds(),

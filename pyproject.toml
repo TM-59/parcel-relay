@@ -26,9 +26,10 @@ ignore = [
   "D213",
   # Conflicts with `ruff format` (Ruff documents it as unsafe to combine with the formatter).
   "COM812",
-  # S607 asks for an absolute path to every program; `mix` lives wherever setup-beam or the local
-  # version manager installed it, so no fixed path exists. Commands stay literal lists (S603 kept).
-  "S607",
+  # S603 and S607 contradict each other for programs without a fixed location: S607 (kept) wants an
+  # absolute path, which for `mix` and `git` can only be found at run time (shutil.which), and S603
+  # flags every argument list that is not literal. Keep S607; leave out S603.
+  "S603",
 ]
 
 [tool.mypy]
