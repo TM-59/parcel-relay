@@ -9,7 +9,7 @@ theory-figs:
 
 # Fails when a statement of docs/theory has no figure, a link is broken, or a referenced function or test is gone.
 theory-check:
-	$(PYTHON) scripts/theory-check.py
+	$(PYTHON) scripts/theory_check.py
 
 # Formatter, linter and type checker for Elixir (mix format, Credo strict, Dialyzer) and for the
 # Python scripts (Ruff with every rule, mypy strict). Versions are pinned by mix.lock and uv.lock; no ignores.
