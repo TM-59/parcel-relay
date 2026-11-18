@@ -1,3 +1,4 @@
+# Copyright 2026 TM-59
 """Check docs/theory against the code. Run with `make theory-check`. Standard library only.
 
 Every statement has a page section and a figure, every link and figure exists, every referenced

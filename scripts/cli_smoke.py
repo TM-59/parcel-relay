@@ -1,3 +1,4 @@
+# Copyright 2026 TM-59
 """Drive the real terminal program and check round boundaries and process exit."""
 
 import json

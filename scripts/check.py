@@ -1,3 +1,4 @@
+# Copyright 2026 TM-59
 """Run native reports and a real CLI smoke; preserve every attempt outside Git."""
 
 import datetime as dt
@@ -8,9 +9,9 @@ import subprocess as sp
 import sys
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from defusedxml import ElementTree
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable
