@@ -7,3 +7,6 @@ test-results/
 *.core
 .env*
 *.pem
+.mypy_cache/
+.ruff_cache/
+__pycache__/
