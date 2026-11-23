@@ -20,7 +20,7 @@ jobs:
         with:
           otp-version: '29.1'
           elixir-version: '1.20.5'
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: _build/plts
           key: plts-otp29.1-elixir1.20.5-${{ hashFiles('mix.lock') }}
